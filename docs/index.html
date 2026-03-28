@@ -334,7 +334,7 @@
 <main>
 
   <!-- ============ Section 1: Summary Stats ============ -->
-  <div class="section">
+<div id="tab-overview" class="tab-content">
     <div class="section-title"><span class="icon">📊</span> 样本概览与质控指标</div>
     <div class="grid-3" style="margin-bottom:20px">
       <div class="stat-card">
@@ -405,7 +405,7 @@
   </div>
 
   <!-- ============ Section 2: Peak Summary ============ -->
-  <div class="section">
+<div id="tab-peak" class="tab-content">
     <div class="section-title"><span class="icon">📍</span> 峰值检测结果</div>
     <div class="card" style="margin-bottom:20px">
       <div class="card-header">各样本峰值数量统计</div>
@@ -550,7 +550,7 @@
   </div>
 
   <!-- ============ Section 3: TSS Accessibility Heatmap ============ -->
-  <div class="section">
+<div id="tab-peak" class="tab-content">
     <div class="section-title"><span class="icon">🔥</span> TSS 染色质可及性热图</div>
     <div class="grid-2">
       <div class="card">
@@ -712,7 +712,7 @@
   </div>
 
   <!-- ============ Section 4: Browser Track ============ -->
-  <div class="section">
+<div id="tab-visual" class="tab-content">
     <div class="section-title"><span class="icon">🧭</span> 基因组浏览器轨迹 — chr19:44,900,000-46,100,000</div>
     <div class="card">
       <div class="card-header">
@@ -804,7 +804,7 @@
   </div>
 
   <!-- ============ Section 5: Motif Enrichment ============ -->
-  <div class="section">
+<div id="tab-footprint" class="tab-content">
     <div class="section-title"><span class="icon">🎯</span> 转录因子基序富集分析 (HOMER)</div>
     <div class="card" style="margin-bottom:20px">
       <div class="card-header">已知基序富集结果 — Top 15 转录因子</div>
@@ -1046,7 +1046,7 @@
   </div>
 
   <!-- ============ Section 6: QC Metrics ============ -->
-  <div class="section">
+<div id="tab-qc" class="tab-content">
     <div class="section-title"><span class="icon">✅</span> 质控指标汇总</div>
     <div class="card">
       <div class="card-header">ATAC-seq 质量评估 (ENCODE 标准)</div>
@@ -1131,5 +1131,25 @@
   <p style="margin-top:6px">生成时间: 2026-03-28 | 流水线版本: v1.0 | <span style="color:var(--accent)">nullvoid42/atacseq-analysis</span></p>
 </footer>
 
-</body>
+
+<style>
+.tab-content { display: none; }
+.tab-content:first-of-type { display: block; }
+nav a { cursor: pointer; }
+</style>
+<script>
+const tabs = ['tab-overview','tab-peak','tab-footprint','tab-visual','tab-qc'];
+const labels = ['概览','峰值检测','足迹分析','可视化','质控'];
+document.querySelectorAll('nav a').forEach((a, i) => {
+  if (i < tabs.length) {
+    a.dataset.tab = tabs[i];
+    a.onclick = () => {
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('nav a').forEach(nav => nav.classList.remove('active'));
+      document.getElementById(tabs[i]).style.display = 'block';
+      a.classList.add('active');
+    };
+  }
+});
+</script></body>
 </html>
