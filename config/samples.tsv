@@ -1,0 +1,3 @@
+sample_id	condition	replicate	fastq_1	fastq_2	bed
+GM12878_ATAC_Rep1	GM12878	1	data/ENCFF234QEM_R1.fastq.gz	data/ENCFF234QEM_R2.fastq.gz	results/peaks/GM12878_ATAC_Rep1_peaks.narrowPeak
+GM12878_ATAC_Rep2	GM12878	2	data/SRR5626302_R1.fastq.gz	data/SRR5626302_R2.fastq.gz	results/peaks/GM12878_ATAC_Rep2_peaks.narrowPeak

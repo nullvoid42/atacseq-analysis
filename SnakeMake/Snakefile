@@ -1,0 +1,392 @@
+# ============================================================================
+# ATAC-seq Analysis Snakemake Pipeline
+# Reproducing Buenrostro 2018 (GEO: GSE65360)
+# ============================================================================
+
+import os
+import sys
+import pandas as pd
+from snakemake.utils import min_version
+
+# Minimum Snakemake version
+min_version("7.0")
+
+# Configuration
+configfile: "config/config.yaml"
+
+# Load samples
+SAMPLES = pd.read_table("config/samples.tsv", sep="\t")
+
+# Directories
+RAW_DATA = config.get("paths", {}).get("raw_data", "data")
+FASTQC = config.get("paths", {}).get("fastqc", "results/fastqc")
+TRIM = config.get("paths", {}).get("trimming", "results/trimming")
+ALIGN = config.get("paths", {}).get("alignment", "results/alignment")
+FILTER = "results/alignment/filtered"
+PEAKS = config.get("paths", {}).get("peaks", "results/peaks")
+FOOTPRINTS = config.get("paths", {}).get("footprints", "results/footprints")
+PLOTS = config.get("paths", {}).get("plots", "results/plots")
+LOGS = "logs"
+
+# Reference genome
+GENOME = config["genome"]["name"]
+GENOME_INDEX = config["genome"]["bowtie2_index"]
+
+# Parameters
+THREADS = config.get("alignment", {}).get("threads", 8)
+MAPQ_MIN = config["filtering"]["mapq_min"]
+
+# Wildcards
+wildcards:
+    sample = SAMPLES["sample_id"].tolist()
+
+# ============================================================================
+# Target rules
+# ============================================================================
+
+rule all:
+    input:
+        # Download
+        expand("{raw}/{sample}_R1.fastq.gz", raw=RAW_DATA, sample=SAMPLES["sample_id"]),
+        # QC
+        expand("{qc}/raw/{sample}_fastqc.html", qc=FASTQC, sample=SAMPLES["sample_id"]),
+        # Trimming
+        expand("{trim}/{sample}_R1.trimmed.fastq.gz", trim=TRIM, sample=SAMPLES["sample_id"]),
+        # Alignment
+        expand("{align}/{sample}.sorted.bam", align=ALIGN, sample=SAMPLES["sample_id"]),
+        # Filtering
+        expand("{filt}/{sample}.filtered.sorted.bam", filt=FILTER, sample=SAMPLES["sample_id"]),
+        # Peaks
+        expand("{peak}/{sample}_peaks.narrowPeak", peak=PEAKS, sample=SAMPLES["sample_id"]),
+        # BigWig
+        expand("{filt}/{sample}.filtered.sorted.bw", filt=FILTER, sample=SAMPLES["sample_id"]),
+        # Plots
+        expand("{plots}/08_summary_statistics.png", plots=PLOTS)
+
+# ============================================================================
+# Rule 1: Download data
+# ============================================================================
+
+rule download_encode:
+    output:
+        fq1 = "{raw}/{sample}_R1.fastq.gz",
+        fq2 = "{raw}/{sample}_R2.fastq.gz"
+    params:
+        encode_url_1 = "https://www.encodeproject.org/files/ENCFF234QEM/@@download/ENCFF234QEM.fastq.gz",
+        encode_url_2 = "https://www.encodeproject.org/files/ENCFF235ZKY/@@download/ENCFF235ZKY.fastq.gz"
+    shell:
+        """
+        mkdir -p {RAW_DATA}
+        curl -L -o {output.fq1} {params.encode_url_1}
+        curl -L -o {output.fq2} {params.encode_url_2}
+        """
+
+# ============================================================================
+# Rule 2: FastQC on raw reads
+# ============================================================================
+
+rule fastqc_raw:
+    input:
+        fq1 = "{raw}/{sample}_R1.fastq.gz",
+        fq2 = "{raw}/{sample}_R2.fastq.gz"
+    output:
+        html1 = "{qc}/raw/{sample}_R1_fastqc.html",
+        html2 = "{qc}/raw/{sample}_R2_fastqc.html",
+        zip1 = "{qc}/raw/{sample}_R1_fastqc.zip",
+        zip2 = "{qc}/raw/{sample}_R2_fastqc.zip"
+    params:
+        outdir = "{qc}/raw"
+    shell:
+        """
+        mkdir -p {params.outdir}
+        fastqc {input.fq1} {input.fq2} -o {params.outdir} -t {THREADS}
+        """
+
+# ============================================================================
+# Rule 3: Trim adapters
+# ============================================================================
+
+rule trim_adapters:
+    input:
+        fq1 = "{raw}/{sample}_R1.fastq.gz",
+        fq2 = "{raw}/{sample}_R2.fastq.gz"
+    output:
+        fq1 = "{trim}/{sample}_R1.trimmed.fastq.gz",
+        fq2 = "{trim}/{sample}_R2.trimmed.fastq.gz",
+        report1 = "{trim}/{sample}_R1.cutadapt.txt",
+        report2 = "{trim}/{sample}_R2.cutadapt.txt"
+    params:
+        adapter_fwd = "CTGTCTCTTATACACATCT",
+        adapter_rev = "CTGTCTCTTATACACATCT",
+        quality = 20,
+        minlen = 20
+    shell:
+        """
+        mkdir -p {TRIM}
+        cutadapt \
+            -a {params.adapter_fwd} \
+            -A {params.adapter_rev} \
+            -q {params.quality} \
+            -m {params.minlen} \
+            -o {output.fq1} \
+            -p {output.fq2} \
+            {input.fq1} {input.fq2} \
+            > {output.report1} 2>&1
+        cp {output.report1} {output.report2}
+        """
+
+# ============================================================================
+# Rule 4: FastQC on trimmed reads
+# ============================================================================
+
+rule fastqc_trimmed:
+    input:
+        fq1 = "{trim}/{sample}_R1.trimmed.fastq.gz",
+        fq2 = "{trim}/{sample}_R2.trimmed.fastq.gz"
+    output:
+        html1 = "{qc}/trimmed/{sample}_R1.trimmed_fastqc.html",
+        html2 = "{qc}/trimmed/{sample}_R2.trimmed_fastqc.html"
+    params:
+        outdir = "{qc}/trimmed"
+    shell:
+        """
+        mkdir -p {params.outdir}
+        fastqc {input.fq1} {input.fq2} -o {params.outdir} -t {THREADS}
+        """
+
+# ============================================================================
+# Rule 5: Bowtie2 alignment
+# ============================================================================
+
+rule bowtie2_align:
+    input:
+        fq1 = "{trim}/{sample}_R1.trimmed.fastq.gz",
+        fq2 = "{trim}/{sample}_R2.trimmed.fastq.gz"
+    output:
+        bam = temp("{align}/{sample}.aligned.bam")
+    params:
+        index = GENOME_INDEX,
+        mode = "very-sensitive",
+        max_frag = 2000
+    shell:
+        """
+        mkdir -p {ALIGN}
+        bowtie2 \
+            --{params.mode} \
+            -X {params.max_frag} \
+            --fr \
+            -x {params.index} \
+            -1 {input.fq1} \
+            -2 {input.fq2} \
+            -S {ALIGN}/{wildcards.sample}.sam \
+            --threads {THREADS}
+        
+        samtools view -bS {ALIGN}/{wildcards.sample}.sam > {output.bam}
+        rm {ALIGN}/{wildcards.sample}.sam
+        """
+
+# ============================================================================
+# Rule 6: Sort and index BAM
+# ============================================================================
+
+rule sort_index_bam:
+    input:
+        bam = "{align}/{sample}.aligned.bam"
+    output:
+        sorted = "{align}/{sample}.sorted.bam",
+        bai = "{align}/{sample}.sorted.bam.bai"
+    shell:
+        """
+        samtools sort {input.bam} -o {output.sorted}
+        samtools index {output.sorted}
+        """
+
+# ============================================================================
+# Rule 7: Remove duplicates
+# ============================================================================
+
+rule remove_duplicates:
+    input:
+        bam = "{align}/{sample}.sorted.bam"
+    output:
+        dedup = temp("{filt}/{sample}.dedup.bam"),
+        metrics = "{filt}/{sample}.dup_metrics.txt"
+    shell:
+        """
+        mkdir -p {FILTER}
+        picard MarkDuplicates \
+            I={input.bam} \
+            O={output.dedup} \
+            M={output.metrics} \
+            REMOVE_DUPLICATES=true \
+            ASSUME_SORTED=true \
+            VALIDATION_STRINGENCY=LENIENT
+        samtools index {output.dedup}
+        """
+
+# ============================================================================
+# Rule 8: Filter by MAPQ and remove chrM
+# ============================================================================
+
+rule filter_bam:
+    input:
+        bam = "{filt}/{sample}.dedup.bam"
+    output:
+        filtered = "{filt}/{sample}.filtered.bam",
+        sorted = "{filt}/{sample}.filtered.sorted.bam",
+        bai = "{filt}/{sample}.filtered.sorted.bam.bai"
+    params:
+        mapq = MAPQ_MIN
+    shell:
+        """
+        # Filter: MAPQ >= {params.mapq}, properly paired, remove chrM
+        samtools view -b \
+            -F 4 -F 256 -f 2 -q {params.mapq} \
+            --exclude chrM --exclude chrMT \
+            {input.bam} > {output.filtered}
+        
+        # Sort
+        samtools sort {output.filtered} -o {output.sorted}
+        samtools index {output.sorted}
+        """
+
+# ============================================================================
+# Rule 9: Generate fragment size distribution
+# ============================================================================
+
+rule fragment_sizes:
+    input:
+        bam = "{filt}/{sample}.filtered.sorted.bam"
+    output:
+        sizes = "{filt}/{sample}.fragment_sizes.txt"
+    shell:
+        """
+        samtools view -f 2 {input.bam} | \
+            awk '{{if($9>0) print $9}}' | \
+            sort | uniq -c | \
+            sort -b -k2,2n > {output.sizes}
+        """
+
+# ============================================================================
+# Rule 10: Call peaks with MACS2
+# ============================================================================
+
+rule macs2_callpeaks:
+    input:
+        bam = "{filt}/{sample}.filtered.sorted.bam"
+    output:
+        narrowpeak = "{peak}/{sample}_peaks.narrowPeak",
+        summits = "{peak}/{sample}_summits.bed",
+        peaks_bed = "{peak}/{sample}_peaks.bed",
+        xls = "{peak}/{sample}_peaks.xls"
+    params:
+        name = "{sample}",
+        genome = config["peak_calling"]["genome_size"],
+        extsize = config["peak_calling"]["extsize"],
+        qvalue = config["peak_calling"]["qvalue"]
+    shell:
+        """
+        mkdir -p {PEAKS}
+        macs2 callpeak \
+            -t {input.bam} \
+            -f BAMPE \
+            -g {params.genome} \
+            -n {params.name} \
+            --nomodel \
+            --extsize {params.extsize} \
+            -q {params.qvalue} \
+            --keep-dup all \
+            --outdir {PEAKS}
+        
+        # Convert narrowPeak to BED
+        cut -f1-6 {output.narrowpeak} > {output.peaks_bed}
+        
+        # Extract summits
+        awk 'BEGIN{{OFS="\t"}} {{
+            summit = $2 + $10;
+            print $1, summit, summit+1, $4, $5, $6
+        }}' {output.narrowpeak} > {output.summits}
+        """
+
+# ============================================================================
+# Rule 11: Generate BigWig for visualization
+# ============================================================================
+
+rule bam_coverage:
+    input:
+        bam = "{filt}/{sample}.filtered.sorted.bam"
+    output:
+        bw = "{filt}/{sample}.filtered.sorted.bw"
+    params:
+        binsize = 20,
+        normalize = "RPKM"
+    shell:
+        """
+        bamCoverage \
+            -b {input.bam} \
+            -o {output.bw} \
+            --binSize {params.binsize} \
+            --normalizeUsing {params.normalize} \
+            --extendReads 200 \
+            --ignoreDuplicates
+        """
+
+# ============================================================================
+# Rule 12: R Visualization
+# ============================================================================
+
+rule visualize:
+    input:
+        peaks = expand("{{peak}}/{sample}_peaks.bed", sample=SAMPLES["sample_id"]),
+        bam = expand("{{filt}}/{sample}.filtered.sorted.bam", sample=SAMPLES["sample_id"]),
+        fragments = expand("{{filt}}/{sample}.fragment_sizes.txt", sample=SAMPLES["sample_id"])
+    output:
+        expand("{{plots}}/{i:02d}_{name}.png", 
+               i=range(1,9), 
+               name=["fragment_size_distribution", "peak_annotation_pie", 
+                     "tss_heatmap", "peak_width_distribution",
+                     "genomic_distribution", "peak_overlap",
+                     "quality_dashboard", "summary_statistics"])
+    script:
+        "../scripts/07_visualization.R"
+
+# ============================================================================
+# Helper rules
+# ============================================================================
+
+rule multiqc:
+    input:
+        expand("{qc}/raw/{sample}_fastqc.html", qc=FASTQC, sample=SAMPLES["sample_id"]),
+        expand("{qc}/trimmed/{sample}_trimmed_fastqc.html", qc=FASTQC, sample=SAMPLES["sample_id"])
+    output:
+        report = "results/multiqc_report.html"
+    shell:
+        """
+        multiqc {FASTQC} -o results/ -n multiqc_report
+        """
+
+rule clean:
+    shell:
+        """
+        rm -rf results/fastqc/*
+        rm -rf results/trimming/*
+        rm -rf results/alignment/*.bam*
+        rm -rf results/alignment/filtered/*.bam*
+        rm -rf results/peaks/*
+        rm -rf results/footprints/*
+        rm -rf results/plots/*.png
+        """
+
+# ============================================================================
+# Report generation
+# ============================================================================
+
+rule report:
+    output:
+        "results/pipeline_report.html"
+    shell:
+        """
+        echo "ATAC-seq Analysis Pipeline Report" > {output}
+        echo "Generated: $(date)" >> {output}
+        echo "Pipeline: Snakemake ATAC-seq" >> {output}
+        """

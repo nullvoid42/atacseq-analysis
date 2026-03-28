@@ -1,0 +1,68 @@
+# ATAC-seq Analysis Configuration
+# Classic case study: GM12878 ATAC-seq (ENCODE/Buenrostro 2018)
+
+project: GM12878_ATACseq
+author: Bioinformatics Pipeline
+date: "2026-03-28"
+
+# Reference genome
+genome:
+  name: hg38
+  build: GRCh38
+  chromosome_sizes: /opt/genomes/hg38.chrom.sizes
+  bowtie2_index: /opt/genomes/hg38
+
+# Data sources
+data:
+  # ENCODE GM12878 ATAC-seq (ENCFF234QEM)
+  encode_accession: ENCSR000AAL
+  encode_url: "https://www.encodeproject.org/files/ENCFF234QEM/@@download/ENCFF234QEM.tsv"
+  sra_accession: SRR12345678  # Alternative: SRA accession
+  sra_run: SRR12345678
+
+# Analysis parameters
+alignment:
+  mode: very-sensitive
+  max_fragment_length: 2000
+  orientation: fr  # forward-reverse (paired-end)
+  min_mapping_quality: 30
+
+filtering:
+  mapq_min: 30
+  remove_chrm: true
+  remove_duplicates: true
+  proper_pairs_only: true
+
+peak_calling:
+  tool: macs2
+  genome_size: hs  # 3e9 for human
+  qvalue: 0.01
+  nomodel: true
+  extsize: 200
+  shift: 0
+  format: BAMPE
+  name: GM12878_ATAC
+
+footprinting:
+  enabled: true
+  motif_database: homer
+  organism: hg38
+  find_motifs_length: [6, 8, 10, 12]
+  annotate_peaks_flags: ""
+
+visualization:
+  bigwig_normalization: RPKM
+  tss_window: 3000
+  tss_bin_size: 10
+  heatmap_npeaks: 20000
+  colorscheme: viridis
+
+# Output directories
+paths:
+  raw_data: results/raw_data
+  fastqc: results/fastqc
+  trimming: results/trimming
+  alignment: results/alignment
+  peaks: results/peaks
+  footprints: results/footprints
+  plots: results/plots

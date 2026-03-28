@@ -1,0 +1,58 @@
+cff-version: 1.2.0
+message: "If you use this pipeline for your research, please cite it as below."
+authors:
+  - family-names: "Zhou"
+    given-names: "Zhen-Yi"
+    orcid: "https://orcid.org/XXXX-XXXX-XXXX-XXXX"
+  - name: "GavinClaw AI Agent"
+title: "ATAC-seq Chromatin Accessibility Analysis Pipeline"
+version: 1.0.0
+date-released: 2026-03-28
+url: "https://github.com/nullvoid42/atacseq-analysis"
+repository-code: "https://github.com/nullvoid42/atacseq-analysis"
+license: MIT
+type: software
+keywords:
+  - ATAC-seq
+  - chromatin accessibility
+  - bioinformatics
+  - epigenomics
+  - Buenrostro 2018
+  - GM12878
+abstract: |
+  A complete, reproducible ATAC-seq analysis pipeline for characterizing
+  chromatin accessibility, reproducing the classic Buenrostro 2018 case study
+  using GM12878 lymphoblastoid cells. Implements the full workflow from raw
+  sequencing reads to transcription factor footprinting and publication-quality
+  visualizations.
+
+references:
+  - type: article
+    title: "Single chromatin accessibility reveals multi-kinase and transcriptional regulation of hematopoiesis"
+    authors:
+      - family-names: "Buenrostro"
+        given-names: "Jason D."
+      - family-names: "Wu"
+        given-names: "Beijing"
+      - family-names: "Litzenburger"
+        given-names: "Ursula M."
+      - family-names: "Ruff"
+        given-names: "David"
+      - family-names: "Gonzales"
+        given-names: "Michael L."
+      - family-names: "Snyder"
+        given-names: "Michael P."
+      - family-names: "Chang"
+        given-names: "Howard Y."
+      - family-names: "Greenleaf"
+        given-names: "William J."
+    journal: "Nature Methods"
+    year: 2018
+    volume: 15
+    pages: "1006-1012"
+    doi: "10.1038/s41592-018-0210-0"
+    identifiers:
+      - type: doi
+        value: "10.1038/s41592-018-0210-0"
+      - type: bibtex
+        comment: "GEO: GSE65360"

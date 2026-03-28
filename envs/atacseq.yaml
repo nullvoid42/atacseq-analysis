@@ -1,0 +1,44 @@
+# ATAC-seq Analysis Pipeline - Conda Environment
+# Reproducing Buenrostro 2018 (GEO: GSE65360)
+
+name: atacseq
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Core alignment tools
+  - bowtie2>=2.5.0
+  - samtools>=1.17
+  - bcftools>=1.17
+  
+  # Peak calling
+  - macs2>=2.7.0
+  
+  # Quality control
+  - fastqc>=0.11.9
+  - cutadapt>=4.0
+  - multiqc>=1.20
+  
+  # Duplicate removal
+  - picard>=3.0.0
+  
+  # BED operations
+  - bedtools>=2.30.0
+  - ucsc-bedgraphtobigwig>=377
+  - ucsc-fetchchromsizes>=377
+  
+  # Visualization
+  - deeptools>=3.5.0
+  - homer>=4.11
+  
+  # Snakemake
+  - snakemake>=7.0
+  
+  # Genome preparation
+  - biopython>=1.81
+  
+  # Utilities
+  - wget>=1.20
+  - curl
+  - tabix>=1.11
