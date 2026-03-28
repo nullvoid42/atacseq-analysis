@@ -1,13 +1,62 @@
 # ATAC-seq 染色质可及性分析流程
 
-一套完整、可复现的 ATAC-seq 分析流程，用于表征染色质可及性，基于经典 Buetrostro 2018（GEO：GSE65360）案例研究，使用 GM12878 淋巴母细胞系。
+一套完整、可复现的 ATAC-seq 分析流程，用于表征染色质可及性，基于经典 Buenrostro 2018（GEO：GSE65360）案例研究，使用 GM12878 淋巴母细胞系。
 
 ## 🧬 概述
 
-本流程实现了从原始测序读数到转录因子足迹分析和出版级可视化的完整 ATAC-seq 分析工作流程。
+### 分析目标
+
+本研究旨在复现 Buenrostro et al. (2018) 的经典 ATAC-seq 分析流程，对 GM12878 人类淋巴母细胞系进行全基因组染色质可及性分析，具体目标包括：
+
+1. **染色质开放区域鉴定**：通过 MACS2 峰值检测识别全基因组范围内的开放染色质位点（open chromatin regions）
+2. **转录因子结合位点预测**：利用 HOMER 进行基序（motif）富集分析，鉴定样本中活跃的转录因子及其结合模式
+3. **染色质状态解析**：分析峰值在基因组功能区域（启动子、增强子、基因间区等）的分布，解析细胞特异性的染色质景观
+4. **核小体 positioning 分析**：通过片段长度分布评估核小体阵列模式（nucleosomal pattern）
+5. **TSS 附近可及性分析**：绘制转录起始位点周围的染色质可及性热图和聚合曲线
 
 **主要数据集：** ENCODE GM12878 ATAC-seq（ENCFF234QEM）
 **参考文献：** Buenrostro JD, et al. (2018) *Nature Methods* | GEO: GSE65360
+
+## 📊 完整分析流程
+
+本流程包含以下七个步骤，涵盖从原始测序数据到出版级可视化的全流程：
+
+```
+原始FASTQ
+  │
+  ▼
+[Step 1] FastQC ─────────────────── 质量评估（碱基质量、GC含量、接头）
+  │                                 输出：fastqc/*.zip
+  ▼
+[Step 2] Cutadapt ────────────────── 接头剪切（去除Nextera XT接头序列）
+  │                                 输出：trimming/*.fastq.gz
+  ▼
+[Step 3] Bowtie2 ─────────────────── 序列比对（hg38，very-sensitive模式）
+  │                                 输出：alignment/*.bam
+  ▼
+[Step 4] Picard + SAMtools ────────── 去重 & 过滤（MAPQ≥30，去除chrM）
+  │                                 输出：alignment/*.filtered.bam
+  ▼
+[Step 5] MACS2 ───────────────────── 峰值检测（nomodel, q<0.01）
+  │                                 输出：peaks/*.narrowPeak, *.bed
+  ▼
+[Step 6] HOMER ───────────────────── 基序富集分析（findMotifsGenome.pl）
+  │                                 输出：footprints/*.motifs
+  ▼
+[Step 7] deepTools + R ────────────── 可视化（BigWig、热图、IGV轨迹）
+                                  输出：plots/*.png, docs/index.html
+```
+
+| 步骤 | 工具 | 主要参数 | 关键输出 |
+|------|------|----------|---------|
+| 质控 | FastQC v0.11.9 | default | *_fastqc.html |
+| 剪切 | Cutadapt v4.0 | -a CTGTCTCTTATACACATCT -q 20 | *.trim.fastq.gz |
+| 比对 | Bowtie2 v2.5.0 | --very-sensitive -X 2000 --fr | aligned.bam |
+| 去重 | Picard v3.0.0 | MarkDuplicates REMOVE_DUPLICATES=true | dedup.bam |
+| 过滤 | SAMtools v1.17 | -q 30 -b -F 3340 | filtered.bam |
+| 峰值 | MACS2 v2.7.0 | callpeak --nomodel --extsize 200 -q 0.01 | *_peaks.narrowPeak |
+| 基序 | HOMER v4.11 | findMotifsGenome -size given | knownResults.html |
+| 可视化 | deepTools v3.5.0 | computeMatrix scale-regions | heatmap.pdf |
 
 ## 📁 项目结构
 

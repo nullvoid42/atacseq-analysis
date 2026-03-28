@@ -261,6 +261,45 @@
   .badge-warn { background: rgba(240,136,62,0.15); color: var(--orange); }
   .badge-bad { background: rgba(248,81,73,0.15); color: var(--red); }
   .badge-info { background: rgba(88,166,255,0.15); color: var(--accent); }
+  /* Pie chart */
+  .pie-chart {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+    background: conic-gradient(
+      var(--accent) 0deg 72deg,
+      var(--purple) 72deg 108deg,
+      var(--green) 108deg 115.2deg,
+      var(--orange) 115.2deg 133.2deg,
+      var(--yellow) 133.2deg 241.2deg,
+      var(--muted) 241.2deg 360deg
+    );
+    box-shadow: 0 0 0 4px var(--card), 0 0 0 5px var(--border);
+  }
+  .pie-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90px;
+    height: 90px;
+    background: var(--card);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .pie-center-value { font-size: 18px; font-weight: 700; color: #fff; }
+  .pie-center-label { font-size: 9px; color: var(--muted); margin-top: 2px; }
+  .pie-legend { display: flex; flex-direction: column; gap: 6px; flex: 1; justify-content: center; }
+  .pie-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .pie-legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .pie-legend-label { color: var(--text); }
+  .pie-legend-pct { color: var(--muted); margin-left: auto; padding-left: 16px; }
+
   /* Chip */
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 16px; font-size: 11px; color: var(--muted); }
   .chip-dot { width: 6px; height: 6px; border-radius: 50%; }
@@ -424,19 +463,52 @@
     <!-- Peak Genomic Distribution -->
     <div class="grid-2">
       <div class="card">
-        <div class="card-header">峰值基因组分布</div>
+        <div class="card-header">峰值基因组功能区分布 (HOMER annotatePeaks)</div>
         <div class="card-body">
-          <table>
-            <thead><tr><th>基因组区域</th><th>数量</th><th>比例</th><th>分布</th></tr></thead>
-            <tbody>
-              <tr><td>启动子 (≤1kb)</td><td>12,483</td><td>20.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:20%;background:var(--accent)"></div></div></td></tr>
-              <tr><td>启动子 (1-3kb)</td><td>6,242</td><td>10.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:10%;background:var(--purple)"></div></div></td></tr>
-              <tr><td>5' UTR</td><td>1,248</td><td>2.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:2%;background:var(--green)"></div></div></td></tr>
-              <tr><td>外显子</td><td>3,121</td><td>5.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:5%;background:var(--orange)"></div></div></td></tr>
-              <tr><td>内含子</td><td>18,725</td><td>30.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:30%;background:var(--yellow)"></div></div></td></tr>
-              <tr><td>基因间区</td><td>20,598</td><td>33.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:33%;background:var(--muted)"></div></div></td></tr>
-            </tbody>
-          </table>
+          <div style="display:flex;align-items:center;gap:24px;">
+            <div class="pie-chart">
+              <div class="pie-center">
+                <div class="pie-center-value">62,417</div>
+                <div class="pie-center-label">总峰值</div>
+              </div>
+            </div>
+            <div class="pie-legend">
+              <div class="pie-legend-item">
+                <div class="pie-legend-dot" style="background:var(--accent)"></div>
+                <span class="pie-legend-label">基因间区</span>
+                <span class="pie-legend-pct">33.0% · 20,598</span>
+              </div>
+              <div class="pie-legend-item">
+                <div class="pie-legend-dot" style="background:var(--yellow)"></div>
+                <span class="pie-legend-label">内含子</span>
+                <span class="pie-legend-pct">30.0% · 18,725</span>
+              </div>
+              <div class="pie-legend-item">
+                <div class="pie-legend-dot" style="background:var(--accent)"></div>
+                <span class="pie-legend-label">启动子 (≤1kb)</span>
+                <span class="pie-legend-pct">20.0% · 12,483</span>
+              </div>
+              <div class="pie-legend-item">
+                <div class="pie-legend-dot" style="background:var(--purple)"></div>
+                <span class="pie-legend-label">启动子 (1-3kb)</span>
+                <span class="pie-legend-pct">10.0% · 6,242</span>
+              </div>
+              <div class="pie-legend-item">
+                <div class="pie-legend-dot" style="background:var(--orange)"></div>
+                <span class="pie-legend-label">外显子</span>
+                <span class="pie-legend-pct">5.0% · 3,121</span>
+              </div>
+              <div class="pie-legend-item">
+                <div class="pie-legend-dot" style="background:var(--green)"></div>
+                <span class="pie-legend-label">5' UTR</span>
+                <span class="pie-legend-pct">2.0% · 1,248</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:14px;padding:10px;background:rgba(88,166,255,0.06);border:1px solid rgba(88,166,255,0.15);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.8;">
+            ✓ 30% 峰值富集于启动子近端区域（≤3kb），符合活跃转录的染色质特征<br>
+            ✓ 基因间区峰值（33%）提示大量远端增强子元件，GM12878 为淋巴细胞系
+          </div>
         </div>
       </div>
       <div class="card">
