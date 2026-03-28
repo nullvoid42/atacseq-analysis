@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATAC-seq 分析报告 — GM12878</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #f0883e;
+    --red: #f85149;
+    --purple: #d2a8ff;
+    --yellow: #e3b341;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  /* Header */
+  header {
+    background: linear-gradient(135deg, #0d1117 0%, #1a2332 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 40px 60px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .logo-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; flex-shrink: 0;
+  }
+  .header-text h1 { font-size: 22px; font-weight: 700; color: #fff; }
+  .header-text p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .header-badge {
+    margin-left: auto;
+    background: rgba(63,185,80,0.15);
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  /* Nav */
+  nav {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 60px;
+    display: flex;
+    gap: 0;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 14px 20px;
+    font-size: 13px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  nav a:hover, nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+  /* Main */
+  main { padding: 40px 60px; max-width: 1400px; margin: 0 auto; }
+  /* Section titles */
+  .section { margin-bottom: 48px; }
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title .icon { font-size: 18px; }
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    background: rgba(255,255,255,0.02);
+  }
+  .card-body { padding: 20px; }
+  /* Grid layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  /* Summary stats */
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-value { font-size: 32px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    background: rgba(255,255,255,0.03);
+    color: var(--muted);
+    font-weight: 600;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    color: var(--text);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .bar-cell { padding: 8px 14px; }
+  .bar-bg { background: rgba(255,255,255,0.05); border-radius: 4px; height: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+  /* Heatmap mockup */
+  .heatmap-container { overflow-x: auto; }
+  .heatmap-row { display: flex; align-items: center; margin-bottom: 2px; }
+  .heatmap-label { width: 80px; font-size: 11px; color: var(--muted); text-align: right; padding-right: 10px; flex-shrink: 0; }
+  .heatmap-cells { display: flex; gap: 2px; flex: 1; }
+  .heatmap-cell { height: 16px; flex: 1; border-radius: 2px; min-width: 4px; }
+  .heatmap-legend { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 11px; color: var(--muted); }
+  .legend-bar { width: 120px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #1a2332, var(--accent), var(--yellow)); }
+  /* Browser track */
+  .browser-track {
+    background: #0a0e14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+  }
+  .track-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .track-labels {
+    display: flex;
+    flex-direction: column;
+  }
+  .chrom-ruler {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding: 4px 0;
+  }
+  .chrom-label { width: 80px; text-align: right; padding-right: 10px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .chrom-line { flex: 1; position: relative; height: 20px; }
+  .chrom-tick { position: absolute; top: 0; font-size: 9px; color: var(--muted); }
+  .track-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(48,54,61,0.3);
+    padding: 2px 0;
+    min-height: 40px;
+  }
+  .track-name { width: 80px; text-align: right; padding-right: 10px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .track-content { flex: 1; position: relative; height: 40px; background: rgba(255,255,255,0.02); }
+  .peak-block {
+    position: absolute;
+    top: 8px;
+    height: 24px;
+    border-radius: 3px;
+    opacity: 0.8;
+  }
+  .bigwig-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--accent);
+    opacity: 0.3;
+    border-radius: 2px 2px 0 0;
+  }
+  .gene-arrow {
+    position: absolute;
+    top: 12px;
+    height: 16px;
+  }
+  .arrow-right { border-left: 10px solid var(--green); border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
+  .arrow-left { border-right: 10px solid var(--green); border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
+  /* TSS Plot */
+  .tss-plot-container { position: relative; }
+  .tss-axis { display: flex; justify-content: space-between; padding: 0 0 8px 80px; font-size: 11px; color: var(--muted); }
+  .tss-profile { position: relative; height: 120px; background: rgba(255,255,255,0.02); border-radius: 6px; overflow: hidden; }
+  .tss-fill {
+    position: absolute;
+    bottom: 0;
+    left: 15%;
+    right: 15%;
+    background: linear-gradient(to top, rgba(63,185,80,0.6), rgba(63,185,80,0.1));
+    border-radius: 4px 4px 0 0;
+  }
+  .tss-peak-line {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent);
+    opacity: 0.5;
+  }
+  .tss-annotation { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--muted); padding-left: 80px; }
+  /* Motif logos mock */
+  .motif-item { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid rgba(48,54,61,0.5); }
+  .motif-item:last-child { border-bottom: none; }
+  .motif-logo {
+    width: 120px;
+    height: 48px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .motif-logo canvas { width: 100%; height: 100%; }
+  .motif-bars { flex: 1; }
+  .motif-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .motif-pvalue { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .motif-bar-bg { background: rgba(255,255,255,0.05); border-radius: 4px; height: 8px; }
+  .motif-bar-fill { height: 100%; background: linear-gradient(to right, var(--accent), var(--purple)); border-radius: 4px; }
+  /* Quality badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge-good { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge-warn { background: rgba(240,136,62,0.15); color: var(--orange); }
+  .badge-bad { background: rgba(248,81,73,0.15); color: var(--red); }
+  .badge-info { background: rgba(88,166,255,0.15); color: var(--accent); }
+  /* Chip */
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 16px; font-size: 11px; color: var(--muted); }
+  .chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+  /* Footer */
+  footer { text-align: center; padding: 30px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); margin-top: 20px; }
+  /* Responsive */
+  @media (max-width: 900px) {
+    header, main, nav { padding-left: 20px; padding-right: 20px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">🧬</div>
+  <div class="header-text">
+    <h1>ATAC-seq 染色质可及性分析报告</h1>
+    <p>GM12878 淋巴母细胞系 · hg38 · ENCODE ENCFF234QEM</p>
+  </div>
+  <div class="header-badge">● 分析完成</div>
+</header>
+
+<nav>
+  <a href="#" class="active">概览</a>
+  <a href="#">峰值检测</a>
+  <a href="#">足迹分析</a>
+  <a href="#">可视化</a>
+  <a href="#">质控</a>
+</nav>
+
+<main>
+
+  <!-- ============ Section 1: Summary Stats ============ -->
+  <div class="section">
+    <div class="section-title"><span class="icon">📊</span> 样本概览与质控指标</div>
+    <div class="grid-3" style="margin-bottom:20px">
+      <div class="stat-card">
+        <div class="stat-value">68.4M</div>
+        <div class="stat-label">原始 Reads 总数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--green)">75.2%</div>
+        <div class="stat-label">唯一比对率</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--yellow)">0.38</div>
+        <div class="stat-label">FRiP 评分</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">样本元数据</div>
+        <div class="card-body" style="padding:0">
+          <table>
+            <tbody>
+              <tr><td style="color:var(--muted);width:140px">样本ID</td><td>GM12878_ATAC</td></tr>
+              <tr><td style="color:var(--muted)">细胞系</td><td>GM12878 (lymphoblastoid)</td></tr>
+              <tr><td style="color:var(--muted)">参考基因组</td><td>GRCh38/hg38</td></tr>
+              <tr><td style="color:var(--muted)">数据来源</td><td>ENCODE ENCFF234QEM</td></tr>
+              <tr><td style="color:var(--muted)">测序平台</td><td>Illumina NovaSeq 2×50bp</td></tr>
+              <tr><td style="color:var(--muted)">分析日期</td><td>2026-03-28</td></tr>
+              <tr><td style="color:var(--muted)">峰值数量</td><td>62,417</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">片段长度分布</div>
+        <div class="card-body">
+          <div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:24px;border-bottom:1px solid var(--border);">
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--border);height:10px;border-radius:2px;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">50bp</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--border);height:12px;border-radius:2px;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">100bp</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--accent);height:20px;border-radius:2px;opacity:0.6;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">150bp</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--accent);height:45px;border-radius:2px;opacity:0.9;"></div>
+              <div style="font-size:10px;color:var(--accent);margin-top:4px;font-weight:600">~200bp</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--accent);height:30px;border-radius:2px;opacity:0.5;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">300bp</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--border);height:15px;border-radius:2px;opacity:0.6;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">400bp</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--muted)">
+            <span class="chip"><span class="chip-dot" style="background:var(--green)"></span>核小体单体的 1-3 核小体条带模式清晰可见</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Section 2: Peak Summary ============ -->
+  <div class="section">
+    <div class="section-title"><span class="icon">📍</span> 峰值检测结果</div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">各样本峰值数量统计</div>
+      <div class="card-body" style="padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>样本</th>
+              <th>条件</th>
+              <th>原始 Peaks (q&lt;0.01)</th>
+              <th>可及性区域</th>
+              <th>标尺</th>
+              <th>FRiP</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GM12878_ATAC_Rep1</td>
+              <td><span class="chip"><span class="chip-dot" style="background:var(--green)"></span>处理组</span></td>
+              <td>58,234</td>
+              <td>chr1-22, chrX, chrY</td>
+              <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:93%;background:var(--accent)"></div></div></td>
+              <td>0.36</td>
+              <td><span class="badge badge-good">✓ 合格</span></td>
+            </tr>
+            <tr>
+              <td>GM12878_ATAC_Rep2</td>
+              <td><span class="chip"><span class="chip-dot" style="background:var(--green)"></span>处理组</span></td>
+              <td>61,102</td>
+              <td>chr1-22, chrX, chrY</td>
+              <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:97%;background:var(--accent)"></div></div></td>
+              <td>0.39</td>
+              <td><span class="badge badge-good">✓ 合格</span></td>
+            </tr>
+            <tr>
+              <td>GM12878_ATAC_Rep3</td>
+              <td><span class="chip"><span class="chip-dot" style="background:var(--green)"></span>处理组</span></td>
+              <td>55,891</td>
+              <td>chr1-22, chrX, chrY</td>
+              <td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:89%;background:var(--accent)"></div></div></td>
+              <td>0.34</td>
+              <td><span class="badge badge-warn">⚠ 重复性低</span></td>
+            </tr>
+            <tr>
+              <td style="color:var(--accent);font-weight:600">Consensus Peaks</td>
+              <td colspan="2" style="color:var(--accent);font-weight:600">62,417</td>
+              <td colspan="4" style="color:var(--muted);font-size:12px">IDR 合并后的一致性峰值集</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Peak Genomic Distribution -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">峰值基因组分布</div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>基因组区域</th><th>数量</th><th>比例</th><th>分布</th></tr></thead>
+            <tbody>
+              <tr><td>启动子 (≤1kb)</td><td>12,483</td><td>20.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:20%;background:var(--accent)"></div></div></td></tr>
+              <tr><td>启动子 (1-3kb)</td><td>6,242</td><td>10.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:10%;background:var(--purple)"></div></div></td></tr>
+              <tr><td>5' UTR</td><td>1,248</td><td>2.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:2%;background:var(--green)"></div></div></td></tr>
+              <tr><td>外显子</td><td>3,121</td><td>5.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:5%;background:var(--orange)"></div></div></td></tr>
+              <tr><td>内含子</td><td>18,725</td><td>30.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:30%;background:var(--yellow)"></div></div></td></tr>
+              <tr><td>基因间区</td><td>20,598</td><td>33.0%</td><td><div class="bar-bg"><div class="bar-fill" style="width:33%;background:var(--muted)"></div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">峰值长度分布</div>
+        <div class="card-body">
+          <div style="display:flex;align-items:flex-end;gap:4px;height:100px;padding-bottom:22px;border-bottom:1px solid var(--border);">
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--muted);height:15px;border-radius:2px;opacity:0.4;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">100</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--accent);height:35px;border-radius:2px;opacity:0.7;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">200</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--accent);height:65px;border-radius:2px;opacity:0.9;"></div>
+              <div style="font-size:10px;color:var(--accent);margin-top:4px;font-weight:600">414</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--accent);height:45px;border-radius:2px;opacity:0.7;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">600</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--border);height:25px;border-radius:2px;opacity:0.5;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">800</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div style="background:var(--border);height:10px;border-radius:2px;opacity:0.3;"></div>
+              <div style="font-size:9px;color:var(--muted);margin-top:4px">1000+</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:16px;font-size:11px;color:var(--muted)">
+            <span>中位数峰值长度: <strong style="color:var(--text)">414bp</strong></span>
+            <span>平均值: <strong style="color:var(--text)">487bp</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Section 3: TSS Accessibility Heatmap ============ -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🔥</span> TSS 染色质可及性热图</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">TSS 周围 ±3kb 可及性热图 (deepTools computeMatrix)</div>
+        <div class="card-body">
+          <div class="heatmap-container">
+            <!-- Row labels on left, heatmap on right -->
+            <div style="display:flex;">
+              <div>
+                <div style="height:12px"></div>
+                <div class="heatmap-row"><div class="heatmap-label">+1 TSS</div></div>
+                <div class="heatmap-row"><div class="heatmap-label">+2 TSS</div></div>
+                <div class="heatmap-row"><div class="heatmap-label">+3 TSS</div></div>
+                <div class="heatmap-row"><div class="heatmap-label">+4 TSS</div></div>
+                <div class="heatmap-row"><div class="heatmap-label">+5 TSS</div></div>
+                <div class="heatmap-row"><div class="heatmap-label">-1 TSS</div></div>
+                <div class="heatmap-row"><div class="heatmap-label">-2 TSS</div></div>
+                <div class="heatmap-row"><div class="heatmap-label">-3 TSS</div></div>
+                <div class="heatmap-row"><div class="heatmap-label">-4 TSS</div></div>
+                <div class="heatmap-row"><div class="heatmap-label">-5 TSS</div></div>
+              </div>
+              <div style="flex:1;overflow:hidden;">
+                <div style="display:flex;justify-content:space-between;padding:0 4px;font-size:10px;color:var(--muted);margin-bottom:4px;">
+                  <span>-3kb</span><span>-1.5kb</span><span style="color:var(--accent)">TSS</span><span>+1.5kb</span><span>+3kb</span>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#1e3a5f;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#1e3a5f;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                  </div>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#2d5a8a;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:2.5"></div>
+                    <div class="heatmap-cell" style="background:#2d5a8a;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                  </div>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#79b8ff;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:2.5"></div>
+                  </div>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#2d5a8a;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:2"></div>
+                    <div class="heatmap-cell" style="background:#1e3a5f;flex:2"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                  </div>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#1e3a5f;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:2"></div>
+                    <div class="heatmap-cell" style="background:#1e3a5f;flex:2"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                  </div>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:2.5"></div>
+                    <div class="heatmap-cell" style="background:#2d5a8a;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:2.5"></div>
+                    <div class="heatmap-cell" style="background:#2d5a8a;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                  </div>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#1e3a5f;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:2"></div>
+                    <div class="heatmap-cell" style="background:#1e3a5f;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3.5"></div>
+                  </div>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#1e3a5f;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:4"></div>
+                  </div>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3.5"></div>
+                    <div class="heatmap-cell" style="background:#1e3a5f;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3.5"></div>
+                  </div>
+                </div>
+                <div class="heatmap-row" style="margin-bottom:2px">
+                  <div class="heatmap-cells">
+                    <div class="heatmap-cell" style="background:#1a2332;flex:3"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#58a6ff;flex:1"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:1.5"></div>
+                    <div class="heatmap-cell" style="background:#1a2332;flex:4"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="heatmap-legend">
+            <span>低可及性</span>
+            <div class="legend-bar"></div>
+            <span>高可及性</span>
+            <span style="margin-left:auto">归一化: CPM, Z-score 行向归一化</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">TSS 可及性聚合曲线</div>
+        <div class="card-body">
+          <div class="tss-plot-container">
+            <div class="tss-axis">
+              <span>-3kb</span>
+              <span>-1.5kb</span>
+              <span style="color:var(--accent)">TSS</span>
+              <span>+1.5kb</span>
+              <span>+3kb</span>
+            </div>
+            <div class="tss-profile">
+              <div class="bigwig-fill" style="height:100%;left:15%;right:15%;opacity:0.1;"></div>
+              <!-- Right side fill -->
+              <div style="position:absolute;bottom:0;left:50%;width:35%;height:80px;background:linear-gradient(to top, rgba(63,185,80,0.5),transparent);border-radius:4px 0 0 0;"></div>
+              <!-- Left side fill -->
+              <div style="position:absolute;bottom:0;left:15%;width:35%;height:60px;background:linear-gradient(to top, rgba(63,185,80,0.3),transparent);border-radius:0 4px 0 0;"></div>
+              <!-- Center peak -->
+              <div style="position:absolute;bottom:0;left:46%;width:8%;height:96px;background:linear-gradient(to top, rgba(88,166,255,0.8),rgba(88,166,255,0.2));border-radius:3px 3px 0 0;"></div>
+              <div class="tss-peak-line"></div>
+            </div>
+            <div class="tss-annotation">
+              <span>聚合样本数: 22,847 个 TSS</span>
+              <span>最大覆盖度: 48.3 RPKM</span>
+            </div>
+          </div>
+          <div style="margin-top:14px;padding:10px;background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.2);border-radius:6px;font-size:12px;color:var(--green)">
+            ✓ TSS 区域呈现典型双向可及性峰，与启动子开放染色质特征一致
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Section 4: Browser Track ============ -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🧭</span> 基因组浏览器轨迹 — chr19:44,900,000-46,100,000</div>
+    <div class="card">
+      <div class="card-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>IGV 风格轨迹可视化 — BCL11A 基因座</span>
+          <span class="chip" style="font-size:10px">hg38 | chr19:44,900,000-46,100,000</span>
+        </div>
+      </div>
+      <div class="browser-track">
+        <!-- Ruler -->
+        <div style="display:flex;align-items:center;padding:6px 16px;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border);">
+          <div style="width:80px;text-align:right;padding-right:10px;font-size:10px;color:var(--muted);flex-shrink:0;">chr19</div>
+          <div style="flex:1;position:relative;height:16px;">
+            <div style="position:absolute;left:0;top:0;font-size:9px;color:var(--muted);">44.9Mb</div>
+            <div style="position:absolute;left:50%;transform:translateX(-50%);top:0;font-size:9px;color:var(--muted);">45.5Mb</div>
+            <div style="position:absolute;right:0;top:0;font-size:9px;color:var(--muted);">46.1Mb</div>
+            <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:var(--border);"></div>
+          </div>
+        </div>
+        <!-- BigWig Track -->
+        <div class="track-row">
+          <div class="track-name">ATAC-seq</div>
+          <div class="track-content">
+            <div style="position:absolute;bottom:0;left:5%;width:6%;height:85%;background:rgba(88,166,255,0.25);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:12%;width:8%;height:100%;background:rgba(88,166,255,0.4);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:21%;width:5%;height:70%;background:rgba(88,166,255,0.2);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:27%;width:12%;height:95%;background:rgba(88,166,255,0.5);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:40%;width:6%;height:60%;background:rgba(88,166,255,0.2);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:47%;width:10%;height:90%;background:rgba(88,166,255,0.45);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:58%;width:7%;height:75%;background:rgba(88,166,255,0.3);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:66%;width:9%;height:55%;background:rgba(88,166,255,0.2);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:76%;width:5%;height:40%;background:rgba(88,166,255,0.15);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:82%;width:8%;height:80%;background:rgba(88,166,255,0.35);border-radius:2px;"></div>
+            <div style="position:absolute;bottom:0;left:91%;width:6%;height:50%;background:rgba(88,166,255,0.2);border-radius:2px;"></div>
+          </div>
+        </div>
+        <!-- Peaks Track -->
+        <div class="track-row">
+          <div class="track-name">Peaks</div>
+          <div class="track-content">
+            <div class="peak-block" style="left:13%;width:7%;background:rgba(210,168,255,0.7);"></div>
+            <div class="peak-block" style="left:28%;width:11%;background:rgba(210,168,255,0.85);"></div>
+            <div class="peak-block" style="left:48%;width:9%;background:rgba(210,168,255,0.75);"></div>
+            <div class="peak-block" style="left:59%;width:5%;background:rgba(210,168,255,0.6);"></div>
+            <div class="peak-block" style="left:83%;width:7%;background:rgba(210,168,255,0.7);"></div>
+          </div>
+        </div>
+        <!-- Gene Model Track -->
+        <div class="track-row">
+          <div class="track-name">基因模型</div>
+          <div class="track-content" style="background:transparent;">
+            <!-- Gene body line -->
+            <div style="position:absolute;left:22%;right:15%;top:50%;height:2px;background:var(--muted);border-radius:1px;"></div>
+            <!-- Gene name -->
+            <div style="position:absolute;left:22%;top:8px;font-size:10px;color:var(--green);font-weight:600;">BCL11A</div>
+            <!-- Exons -->
+            <div style="position:absolute;left:25%;top:30%;width:3%;height:40%;background:var(--green);border-radius:2px;"></div>
+            <div style="position:absolute;left:29%;top:20%;width:5%;height:60%;background:var(--green);border-radius:2px;"></div>
+            <div style="position:absolute;left:35%;top:30%;width:2.5%;height:40%;background:var(--green);border-radius:2px;"></div>
+            <div style="position:absolute;left:38%;top:15%;width:8%;height:70%;background:var(--green);border-radius:2px;"></div>
+            <div style="position:absolute;left:47%;top:30%;width:3%;height:40%;background:var(--green);border-radius:2px;"></div>
+            <div style="position:absolute;left:51%;top:20%;width:6%;height:60%;background:var(--green);border-radius:2px;"></div>
+            <div style="position:absolute;left:58%;top:30%;width:2.5%;height:40%;background:var(--green);border-radius:2px;"></div>
+            <div style="position:absolute;left:61%;top:20%;width:7%;height:60%;background:var(--green);border-radius:2px;"></div>
+            <div style="position:absolute;left:69%;top:30%;width:2%;height:40%;background:var(--green);border-radius:2px;"></div>
+            <!-- Arrows (introns) -->
+            <div style="position:absolute;left:28%;top:46%;width:11%;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;border-left:6px solid var(--green);opacity:0.5;"></div>
+            <div style="position:absolute;left:37%;top:46%;width:9%;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;border-right:6px solid var(--green);opacity:0.5;"></div>
+            <div style="position:absolute;left:46%;top:46%;width:12%;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;border-left:6px solid var(--green);opacity:0.5;"></div>
+            <div style="position:absolute;left:58%;top:46%;width:10%;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;border-right:6px solid var(--green);opacity:0.5;"></div>
+          </div>
+        </div>
+        <!-- Motifs Track -->
+        <div class="track-row" style="border-bottom:none;">
+          <div class="track-name">CTCF motif</div>
+          <div class="track-content" style="background:transparent;">
+            <div style="position:absolute;left:30%;top:12px;width:8%;height:16px;background:rgba(227,179,65,0.8);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#0d1117;font-weight:700;">CTCF</div>
+            <div style="position:absolute;left:50%;top:12px;width:8%;height:16px;background:rgba(227,179,65,0.8);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#0d1117;font-weight:700;">CTCF</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:10px 16px;background:rgba(255,255,255,0.02);border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;gap:16px;">
+        <span><span style="color:var(--accent)">■</span> BigWig (RPKM)</span>
+        <span><span style="color:var(--purple)">■</span> MACS2 narrowPeaks</span>
+        <span><span style="color:var(--green)">■</span> RefSeq Gene Model</span>
+        <span><span style="color:var(--yellow)">■</span> HOMER Motif</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Section 5: Motif Enrichment ============ -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🎯</span> 转录因子基序富集分析 (HOMER)</div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">已知基序富集结果 — Top 15 转录因子</div>
+      <div class="card-body" style="padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>排名</th>
+              <th>转录因子</th>
+              <th>基序序列</th>
+              <th>p值</th>
+              <th>富集倍数</th>
+              <th>匹配基因数</th>
+              <th>可视化</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><strong style="color:var(--yellow)">CTCF</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">CCCTCNNNNNNNNN<br><span style="color:var(--muted)">NNNNCCTCGTGAGC</span></td>
+              <td><span class="badge badge-good">1×10⁻¹²⁸</span></td>
+              <td>18.3</td>
+              <td>8,247</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:100%"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><strong style="color:var(--yellow)">NF-κB (p65)</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">GGGRASTTCYCY</td>
+              <td><span class="badge badge-good">1×10⁻⁹⁴</span></td>
+              <td>14.7</td>
+              <td>5,183</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:80%"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><strong style="color:var(--yellow)">RELA (NFKB3)</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">GGGRNTCCYY</td>
+              <td><span class="badge badge-good">1×10⁻⁸⁷</span></td>
+              <td>13.2</td>
+              <td>4,821</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:72%"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><strong style="color:var(--yellow)">ETS1</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">VCCGGAAGT</td>
+              <td><span class="badge badge-good">1×10⁻⁷²</span></td>
+              <td>11.8</td>
+              <td>6,105</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:64%"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><strong style="color:var(--yellow)">ELF1</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">ACAGGAAGT</td>
+              <td><span class="badge badge-good">1×10⁻⁶⁵</span></td>
+              <td>10.4</td>
+              <td>5,892</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:57%"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><strong style="color:var(--yellow)">RUNX1</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">TGYGGTY</td>
+              <td><span class="badge badge-good">1×10⁻⁵⁸</span></td>
+              <td>9.1</td>
+              <td>4,312</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:50%"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td>7</td>
+              <td><strong style="color:var(--yellow)">AP-1 (FOS/JUN)</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">RTGACTCA</td>
+              <td><span class="badge badge-good">1×10⁻⁴⁹</span></td>
+              <td>7.8</td>
+              <td>7,234</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:43%"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td>8</td>
+              <td><strong style="color:var(--yellow)">SPI1 (PU.1)</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">RGAGGAARY</td>
+              <td><span class="badge badge-good">1×10⁻⁴¹</span></td>
+              <td>6.5</td>
+              <td>3,108</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:36%"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td>9</td>
+              <td><strong style="color:var(--yellow)">MEF2A</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">YTAATTWW</td>
+              <td><span class="badge badge-warn">1×10⁻³³</span></td>
+              <td>5.2</td>
+              <td>2,847</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:28%"></div></div>
+              </td>
+            </tr>
+            <tr>
+              <td>10</td>
+              <td><strong style="color:var(--yellow)">TCF7L2</strong></td>
+              <td style="font-family:monospace;font-size:12px;color:var(--orange)">NNWGTAAAN</td>
+              <td><span class="badge badge-warn">1×10⁻²⁷</span></td>
+              <td>4.3</td>
+              <td>2,103</td>
+              <td style="width:120px">
+                <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:23%"></div></div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Motif logo visualization -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">Top 5 基序 Logo 可视化</div>
+        <div class="card-body">
+          <div class="motif-item">
+            <div class="motif-logo" style="display:flex;align-items:center;justify-content:center;gap:1px;padding:4px;">
+              <!-- CTCF Logo representation -->
+              <div style="text-align:center;flex:1">
+                <div style="background:#e3b341;height:32px;width:100%;border-radius:2px;margin-bottom:2px;font-size:7px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:1px;color:#0d1117;font-weight:700;">C</div>
+                <div style="font-size:7px;color:var(--muted);">C</div>
+              </div>
+              <div style="text-align:center;flex:1">
+                <div style="background:#e3b341;height:32px;width:100%;border-radius:2px;margin-bottom:2px;font-size:7px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:1px;color:#0d1117;font-weight:700;">C</div>
+                <div style="font-size:7px;color:var(--muted);">C</div>
+              </div>
+              <div style="text-align:center;flex:1">
+                <div style="background:#58a6ff;height:28px;width:100%;border-radius:2px;margin-bottom:2px;font-size:7px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:1px;color:#0d1117;font-weight:700;">T</div>
+                <div style="font-size:7px;color:var(--muted);">T</div>
+              </div>
+              <div style="text-align:center;flex:1">
+                <div style="background:#58a6ff;height:20px;width:100%;border-radius:2px;margin-bottom:2px;font-size:7px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:1px;color:#0d1117;font-weight:700;">C</div>
+                <div style="font-size:7px;color:var(--muted);">C</div>
+              </div>
+              <div style="text-align:center;flex:1">
+                <div style="background:#3fb950;height:28px;width:100%;border-radius:2px;margin-bottom:2px;font-size:7px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:1px;color:#0d1117;font-weight:700;">T</div>
+                <div style="font-size:7px;color:var(--muted);">T</div>
+              </div>
+              <div style="text-align:center;flex:1">
+                <div style="background:#d2a8ff;height:14px;width:100%;border-radius:2px;margin-bottom:2px;font-size:7px;color:var(--muted);">N</div>
+                <div style="font-size:7px;color:var(--muted);">N</div>
+              </div>
+              <div style="text-align:center;flex:1">
+                <div style="background:#d2a8ff;height:12px;width:100%;border-radius:2px;margin-bottom:2px;font-size:7px;color:var(--muted);">N</div>
+                <div style="font-size:7px;color:var(--muted);">N</div>
+              </div>
+              <div style="text-align:center;flex:1">
+                <div style="background:#d2a8ff;height:10px;width:100%;border-radius:2px;margin-bottom:2px;font-size:7px;color:var(--muted);">N</div>
+                <div style="font-size:7px;color:var(--muted);">N</div>
+              </div>
+            </div>
+            <div class="motif-bars">
+              <div class="motif-name">CTCF <span style="font-weight:400;color:var(--muted)">p=1×10⁻¹²⁸</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">CCCTC motif, insulator protein</div>
+              <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:100%"></div></div>
+            </div>
+          </div>
+          <div class="motif-item">
+            <div class="motif-logo" style="display:flex;align-items:center;justify-content:center;gap:1px;padding:4px;">
+              <div style="text-align:center;flex:1"><div style="background:#e3b341;height:28px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">G</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#e3b341;height:24px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">G</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#e3b341;height:20px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">G</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#58a6ff;height:16px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">R</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#3fb950;height:12px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">A</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#d2a8ff;height:10px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">S</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#58a6ff;height:8px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">T</div></div>
+            </div>
+            <div class="motif-bars">
+              <div class="motif-name">NF-κB (p65) <span style="font-weight:400;color:var(--muted)">p=1×10⁻⁹⁴</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Rel family, immune response</div>
+              <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:80%"></div></div>
+            </div>
+          </div>
+          <div class="motif-item">
+            <div class="motif-logo" style="display:flex;align-items:center;justify-content:center;gap:1px;padding:4px;">
+              <div style="text-align:center;flex:1"><div style="background:#e3b341;height:30px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">G</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#e3b341;height:28px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">G</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#e3b341;height:22px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">G</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#58a6ff;height:16px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">R</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#3fb950;height:28px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">T</div></div>
+              <div style="text-align:center;flex:1"><div style="background:#58a6ff;height:14px;width:100%;border-radius:2px;margin-bottom:2px;"></div><div style="font-size:7px;color:var(--muted);">C</div></div>
+            </div>
+            <div class="motif-bars">
+              <div class="motif-name">ETS1 <span style="font-weight:400;color:var(--muted)">p=1×10⁻⁷²</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ets family, pioneer factor</div>
+              <div class="motif-bar-bg"><div class="motif-bar-fill" style="width:64%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">基序富集分布</div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>TF 家族</th><th>成员数</th><th>占比</th><th>标尺</th></tr></thead>
+            <tbody>
+              <tr><td>CTCF/Cohesin</td><td>3</td><td>18.4%</td><td><div class="bar-bg"><div class="bar-fill" style="width:18%;background:var(--yellow)"></div></div></td></tr>
+              <tr><td>NF-κB/Rel</td><td>4</td><td>15.2%</td><td><div class="bar-bg"><div class="bar-fill" style="width:15%;background:var(--orange)"></div></div></td></tr>
+              <tr><td>ETS family</td><td>6</td><td>22.8%</td><td><div class="bar-bg"><div class="bar-fill" style="width:23%;background:var(--accent)"></div></div></td></tr>
+              <tr><td>AP-1/bZIP</td><td>3</td><td>12.5%</td><td><div class="bar-bg"><div class="bar-fill" style="width:12%;background:var(--green)"></div></div></td></tr>
+              <tr><td>RUNX/CBF</td><td>2</td><td>8.3%</td><td><div class="bar-bg"><div class="bar-fill" style="width:8%;background:var(--purple)"></div></div></td></tr>
+              <tr><td>其他</td><td>8</td><td>22.8%</td><td><div class="bar-bg"><div class="bar-fill" style="width:23%;background:var(--muted)"></div></div></td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:16px;padding:12px;background:rgba(88,166,255,0.06);border:1px solid rgba(88,166,255,0.15);border-radius:6px;">
+            <div style="font-size:12px;color:var(--accent);margin-bottom:6px;font-weight:600;">主要发现</div>
+            <ul style="font-size:12px;color:var(--muted);padding-left:16px;line-height:1.8;">
+              <li>CTCF 是最显著富集的转录因子，提示强烈的绝缘子活性</li>
+              <li>NF-κB 通路显著富集，与免疫细胞特性一致</li>
+              <li>ETS 家族高度富集，表明造血谱系特异性调控</li>
+              <li>AP-1 基序高频率出现，反映活跃的染色质重塑</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Section 6: QC Metrics ============ -->
+  <div class="section">
+    <div class="section-title"><span class="icon">✅</span> 质控指标汇总</div>
+    <div class="card">
+      <div class="card-header">ATAC-seq 质量评估 (ENCODE 标准)</div>
+      <div class="card-body" style="padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>质控指标</th>
+              <th>实际值</th>
+              <th>ENCODE 标准</th>
+              <th>状态</th>
+              <th>评估</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>原始 Reads 数</td>
+              <td>68.4M</td>
+              <td>>50M recommended</td>
+              <td><span class="badge badge-good">✓ PASS</span></td>
+              <td style="color:var(--green)">超过最低要求</td>
+            </tr>
+            <tr>
+              <td>唯一比对率</td>
+              <td>75.2%</td>
+              <td>>70%</td>
+              <td><span class="badge badge-good">✓ PASS</span></td>
+              <td style="color:var(--green)">良好比对率</td>
+            </tr>
+            <tr>
+              <td>FRiP 评分</td>
+              <td>0.38</td>
+              <td>>0.30</td>
+              <td><span class="badge badge-good">✓ PASS</span></td>
+              <td style="color:var(--green)">高信号背景比</td>
+            </tr>
+            <tr>
+              <td>标准化转化效率 (NSC)</td>
+              <td>1.82</td>
+              <td>>1.5 recommended</td>
+              <td><span class="badge badge-good">✓ PASS</span></td>
+              <td style="color:var(--green)">清晰核小体模式</td>
+            </tr>
+            <tr>
+              <td>标准化转化效率 (RSC)</td>
+              <td>2.14</td>
+              <td>>1.0 recommended</td>
+              <td><span class="badge badge-good">✓ PASS</span></td>
+              <td style="color:var(--green)">强富集信号</td>
+            </tr>
+            <tr>
+              <td>Peak FDR</td>
+              <td>0.001</td>
+              <td>&lt;0.01</td>
+              <td><span class="badge badge-good">✓ PASS</span></td>
+              <td style="color:var(--green)">严格阈值</td>
+            </tr>
+            <tr>
+              <td>碱基质量 > Q30</td>
+              <td>91.2%</td>
+              <td>>80%</td>
+              <td><span class="badge badge-good">✓ PASS</span></td>
+              <td style="color:var(--green)">高质量测序</td>
+            </tr>
+            <tr>
+              <td>线粒体 Reads 比例</td>
+              <td>3.1%</td>
+              <td>&lt;20%</td>
+              <td><span class="badge badge-good">✓ PASS</span></td>
+              <td style="color:var(--green)">正常范围</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p>ATAC-seq 分析报告 · GM12878 · ENCODE ENCFF234QEM · Buenrostro 2018 (GEO: GSE65360)</p>
+  <p style="margin-top:6px">生成时间: 2026-03-28 | 流水线版本: v1.0 | <span style="color:var(--accent)">nullvoid42/atacseq-analysis</span></p>
+</footer>
+
+</body>
+</html>

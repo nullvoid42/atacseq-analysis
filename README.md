@@ -1,85 +1,83 @@
-# ATAC-seq Chromatin Accessibility Analysis Pipeline
+# ATAC-seq 染色质可及性分析流程
 
-A complete, reproducible ATAC-seq analysis pipeline for characterizing chromatin accessibility, 
-reproducing the classic Buenrostro 2018 (GEO: GSE65360) case study using GM12878 lymphoblastoid cells.
+一套完整、可复现的 ATAC-seq 分析流程，用于表征染色质可及性，基于经典 Buetrostro 2018（GEO：GSE65360）案例研究，使用 GM12878 淋巴母细胞系。
 
-## 🧬 Overview
+## 🧬 概述
 
-This pipeline implements the full ATAC-seq analysis workflow from raw sequencing reads to 
-transcription factor footprinting and publication-quality visualizations.
+本流程实现了从原始测序读数到转录因子足迹分析和出版级可视化的完整 ATAC-seq 分析工作流程。
 
-**Primary Dataset:** ENCODE GM12878 ATAC-seq (ENCFF234QEM)  
-**Reference:** Buenrostro JD, et al. (2018) *Nature Methods* | GEO: GSE65360
+**主要数据集：** ENCODE GM12878 ATAC-seq（ENCFF234QEM）
+**参考文献：** Buenrostro JD, et al. (2018) *Nature Methods* | GEO: GSE65360
 
-## 📁 Project Structure
+## 📁 项目结构
 
 ```
 atacseq-analysis/
 ├── config/
-│   ├── config.yaml           # Main configuration
-│   └── samples.tsv           # Sample manifest
+│   ├── config.yaml           # 主配置文件
+│   └── samples.tsv           # 样本清单
 ├── scripts/
-│   ├── 01_download.sh        # Data acquisition
-│   ├── 02_qc_trim.sh         # FastQC + adapter trimming
-│   ├── 03_align.sh           # Bowtie2 alignment
-│   ├── 04_filter.sh          # Deduplication & filtering
-│   ├── 05_peak_calling.sh    # MACS2 peak calling
-│   ├── 06_footprinting.sh    # TF motif annotation
-│   └── 07_visualization.R     # Comprehensive visualizations
+│   ├── 01_download.sh        # 数据获取
+│   ├── 02_qc_trim.sh         # FastQC 质控 + 接头剪切
+│   ├── 03_align.sh           # Bowtie2 比对
+│   ├── 04_filter.sh          # 去重与过滤
+│   ├── 05_peak_calling.sh    # MACS2 峰值检测
+│   ├── 06_footprinting.sh    # TF 基序注释
+│   └── 07_visualization.R     # 综合可视化
 ├── SnakeMake/
-│   └── Snakefile             # Snakemake workflow
+│   └── Snakefile             # Snakemake 工作流
 ├── results/
-│   ├── fastqc/               # FastQC reports
-│   ├── trimming/             # Trimmed reads
-│   ├── alignment/            # BAM files
-│   ├── peaks/                # MACS2 outputs
-│   ├── footprints/           # Motif analysis
-│   └── plots/                # Visualizations
-├── envs/                     # Conda environments
+│   ├── fastqc/               # FastQC 报告
+│   ├── trimming/             # 剪切后reads
+│   ├── alignment/            # BAM 文件
+│   ├── peaks/                # MACS2 输出
+│   ├── footprints/           # 基序分析
+│   └── plots/                # 可视化结果
+├── envs/                     # Conda 环境
 │   ├── atacseq.yaml
 │   └── r-vis.yaml
 ├── CITATION.cff
 └── README.md
 ```
 
-## 🔧 Installation
+## 🔧 安装
 
-### Prerequisites
+### 前置条件
 
 ```bash
-# Install Conda/Mamba
+# 安装 Conda/Mamba
 curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
 bash Miniforge3-$(uname)-$(uname -m).sh
 
-# Clone this repository
+# 克隆本仓库
 git clone https://github.com/nullvoid42/atacseq-analysis.git
 cd atacseq-analysis
 
-# Create environments
+# 创建环境
 conda env create -f envs/atacseq.yaml
 conda env create -f envs/r-vis.yaml
 ```
 
-### Required Tools
+### 所需工具
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| FastQC | ≥0.11.9 | Read quality assessment |
-| Cutadapt | ≥4.0 | Adapter trimming |
-| Bowtie2 | ≥2.5.0 | Read alignment |
-| SAMtools | ≥1.17 | BAM processing |
-| Picard | ≥3.0.0 | Duplicate removal |
-| MACS2 | ≥2.7.0 | Peak calling |
-| bedtools | ≥2.30.0 | BED operations |
-| deepTools | ≥3.5.0 | BigWig & heatmaps |
-| HOMER | ≥4.11 | Motif annotation |
-| R | ≥4.2.0 | Visualization |
+| 工具 | 版本 | 用途 |
+|------|------|------|
+| FastQC | ≥0.11.9 | 读数质量评估 |
+| Cutadapt | ≥4.0 | 接头剪切 |
+| Bowtie2 | ≥2.5.0 | 序列比对 |
+| SAMtools | ≥1.17 | BAM 处理 |
+| Picard | ≥3.0.0 | 去重 |
+| MACS2 | ≥2.7.0 | 峰值检测 |
+| bedtools | ≥2.30.0 | BED 操作 |
+| deepTools | ≥3.5.0 | BigWig 和热图 |
+| HOMER | ≥4.11 | 基序注释 |
+| R | ≥4.2.0 | 可视化 |
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### 1. Configure your analysis
+### 1. 配置分析参数
 
-Edit `config/config.yaml`:
+编辑 `config/config.yaml`：
 
 ```yaml
 project: GM12878_ATACseq
@@ -91,29 +89,29 @@ samples:
     fastq_2: /data/GM12878_R2.fastq.gz
 ```
 
-### 2. Download test data (optional)
+### 2. 下载测试数据（可选）
 
 ```bash
-# Download from ENCODE
+# 从 ENCODE 下载
 bash scripts/01_download.sh
 
-# Or from SRA
+# 或从 SRA 下载
 prefetch SRR12345678
 fasterq-dump SRR12345678 --split-files
 ```
 
-### 3. Run the pipeline
+### 3. 运行流程
 
-**Using Snakemake (recommended):**
+**使用 Snakemake（推荐）：**
 ```bash
 conda activate atacseq
 snakemake -p --use-conda --cores 8
 
-# Dry run first
+# 先预览
 snakemake -n -p
 ```
 
-**Using individual scripts:**
+**使用独立脚本：**
 ```bash
 bash scripts/01_download.sh
 bash scripts/02_qc_trim.sh
@@ -124,67 +122,67 @@ bash scripts/06_footprinting.sh
 Rscript scripts/07_visualization.R
 ```
 
-## 📊 Pipeline Overview
+## 📊 流程概览
 
-### Step 1: Data Acquisition
-- Download ENCODE ATAC-seq GM12878 data (ENCFF234QEM)
-- SRA toolkit for NCBI data retrieval
-- Checksum validation
+### 第一步：数据获取
+- 下载 ENCODE ATAC-seq GM12878 数据（ENCFF234QEM）
+- 使用 SRA toolkit 从 NCBI 获取数据
+- 校验和验证
 
-### Step 2: Quality Control & Trimming
-- **FastQC**: Per-base quality, adapter content, read length distribution
-- **Cutadapt**: Remove Nextera XT adapters (CTGTCTCTTATACACATCT)
-- **chrM removal**: Filter mitochondrial reads
+### 第二步：质控与剪切
+- **FastQC**：逐碱基质量、接头含量、读长分布
+- **Cutadapt**：去除 Nextera XT 接头（CTGTCTCTTATACACATCT）
+- **chrM 去除**：过滤线粒体 reads
 
-### Step 3: Alignment
-- **Bowtie2**: very-sensitive mode, paired-end
-- **SAMtools**: Convert, sort, index (BAM)
-- Reference: GRCh38/hg38
+### 第三步：比对
+- **Bowtie2**：超敏感模式，双端测序
+- **SAMtools**：转换、排序、建立索引（BAM）
+- 参考基因组：GRCh38/hg38
 
-### Step 4: Filtering
-- **Picard MarkDuplicates**: Remove PCR duplicates
-- **SAMtools filter**: MAPQ ≥ 30, proper pairs
-- **chrM exclusion**: Remove mitochondrial alignments
+### 第四步：过滤
+- **Picard MarkDuplicates**：去除 PCR 重复
+- **SAMtools filter**：MAPQ ≥ 30，正确配对
+- **chrM 排除**：去除线粒体比对结果
 
-### Step 5: Peak Calling
-- **MACS2 callpeak**: nomodel, extsize=200, shift=0
-- Generates: peaks.bed, summits.bed, narrowPeak
-- Automatic q-value thresholding
+### 第五步：峰值检测
+- **MACS2 callpeak**：nomodel，extsize=200，shift=0
+- 生成：peaks.bed、summits.bed、narrowPeak
+- 自动 q 值阈值化
 
-### Step 6: Footprinting (Optional)
-- **HOMER findMotifsGenome**: De novo motif discovery
-- ** annotatePeaks.pl**: Known motif annotation
-- **PWMScan**: TF binding site identification
+### 第六步：足迹分析（可选）
+- **HOMER findMotifsGenome**：从头发现基序
+- **annotatePeaks.pl**：已知基序注释
+- **PWMScan**：转录因子结合位点鉴定
 
-### Step 7: Visualization
-- **BigWig tracks**: Normalized coverage (RPKM)
-- **TSS heatmaps**: Accessibility around transcription start sites
-- **Peak annotations**: Genomic distribution (promoter, intron, intergenic)
-- **Motif logos**: Top enriched TFs
-- **FRiP score**: Fraction of reads in peaks
+### 第七步：可视化
+- **BigWig 轨迹**：归一化覆盖度（RPKM）
+- **TSS 热图**：转录起始位点周围的可及性
+- **峰值注释**：基因组分布（启动子、内含子、基因间区）
+- **基序 logo**：富集 top 转录因子
+- **FRiP 评分**：落在峰值内的 reads 比例
 
-## 📈 Expected Results
+## 📈 预期结果
 
-### Quality Metrics
+### 质控指标
 
-| Metric | Expected Value |
-|--------|---------------|
-| Raw reads | 50-100M (ENCODE GM12878) |
-| Fragment size | ~200bp median (nucleosomal pattern) |
-| Unique mapping rate | >70% |
-| FRiP score | >0.30 |
-| Number of peaks | 30,000-100,000 |
+| 指标 | 预期值 |
+|------|--------|
+| 原始 reads 数 | 50-100M（ENCODE GM12878） |
+| 片段长度 | 中位数约 200bp（核小体模式） |
+| 唯一比对率 | >70% |
+| FRiP 评分 | >0.30 |
+| 峰值数量 | 30,000-100,000 |
 
-### Key Findings (Buenrostro 2018 GM12878)
+### 主要发现（Buenrostro 2018 GM12878）
 
-1. **Open chromatin regions**: ~50,000-80,000 accessible sites
-2. **Peak distribution**: Prominent enrichment at promoters and enhancers
-3. **Top TFs**: CTCF, NFKB, RELA, ETS family motifs
-4. **Nucleosomal pattern**: Clear 1-3 nucleosome banding in fragment size distribution
+1. **开放染色质区域**：约 50,000-80,000 个可及位点
+2. **峰值分布**：启动子和增强子区域显著富集
+3. **主要转录因子**：CTCF、NFKB、RELA、ETS 家族基序
+4. **核小体模式**：片段长度分布中清晰的 1-3 核小体条带
 
-## 🔬 Methods Summary
+## 🔬 方法摘要
 
-### Alignment Parameters
+### 比对参数
 ```bash
 bowtie2 --very-sensitive \
         -X 2000 \
@@ -196,7 +194,7 @@ bowtie2 --very-sensitive \
 | samtools sort -o aligned.bam
 ```
 
-### Peak Calling Parameters
+### 峰值检测参数
 ```bash
 macs2 callpeak \
     -t aligned.filtered.bam \
@@ -208,27 +206,28 @@ macs2 callpeak \
     -q 0.01
 ```
 
-### Normalization
-- **BigWig**: RPKM normalization (1x scaling)
-- **Heatmaps**: CPM normalization, Z-score row-wise
-- **Peak calling**: Dynamic background estimation
+### 归一化方法
+- **BigWig**：RPKM 归一化（1x 缩放）
+- **热图**：CPM 归一化，行向 Z-score
+- **峰值检测**：动态背景估计
 
-## 📚 References
+## 📚 参考文献
 
-- Buenrostro JD, et al. (2018) Single chromatin accessibility reveals 
-  multi-kinase and transcriptional regulation of hematopoiesis. 
+- Buenrostro JD, et al. (2018) Single chromatin accessibility reveals
+  multi-kinase and transcriptional regulation of hematopoiesis.
   *Nature Methods* 15: 1006-1012. GEO: GSE65360
 
-- ENCODE Project Consortium (2012) An integrated encyclopedia of DNA 
+- ENCODE Project Consortium (2012) An integrated encyclopedia of DNA
   elements in the human genome. *Nature* 489: 57-74.
 
-- Buenrostro JD, et al. (2013) Transposition of native chromatin for 
+- Buenrostro JD, et al. (2013) Transposition of native chromatin for
   fast and sensitive epigenomic profiling. *Nature Methods* 10: 1213-1218.
 
-## 📝 License
+## 📝 许可证
 
-MIT License - see LICENSE file.
+MIT License - 详见 LICENSE 文件。
 
-## 🙋 Support
+## 🙋 支持
 
-Open an issue on GitHub for questions or problems.
+如有疑问或问题，请在 GitHub 上提交 issue。
+
